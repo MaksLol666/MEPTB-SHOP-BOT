@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MEPTB SHOP</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        :root {
+            --bg-color: #000000;
+            --card-bg: #1c1c1e;
+            --active-color: #a980f5;
+            --accent-gradient: linear-gradient(135deg, #a980f5 0%, #7b51d8 100%);
+            --text-secondary: #8e8e93;
+            --nav-bg: rgba(28, 28, 30, 0.9);
+            --safe-area-bottom: env(safe-area-inset-bottom);
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            padding-bottom: calc(80px + var(--safe-area-bottom)); /* Место под меню */
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            overflow-x: hidden;
+        }
+
+        /* --- НАВИГАЦИЯ (НИЖНЕЕ МЕНЮ) --- */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: var(--nav-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0 calc(10px + var(--safe-area-bottom)) 0;
+            z-index: 1000;
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            color: var(--text-secondary);
+            font-size: 10px;
+            font-weight: 500;
+            opacity: 0.7;
+            transition: 0.3s;
+            cursor: pointer;
+            width: 60px;
+        }
+
+        .nav-item.active {
+            color: var(--active-color);
+            opacity: 1;
+            transform: scale(1.05);
+        }
+
+        .nav-icon {
+            font-size: 24px;
+            margin-bottom: 2px;
+        }
+        
+        /* БЕЙДЖИК НА КОРЗИНЕ */
+        .cart-badge {
+            position: absolute;
+            top: 5px;
+            right: 15px;
+            background: #ff3b30;
+            color: white;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 10px;
+            display: none;
+        }
+
+        /* --- СТРАНИЦЫ --- */
+        .page {
+            display: none;
+            padding: 20px;
+            animation: fadeIn 0.3s ease;
+        }
+        .page.active { display: block; }
+        
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* --- ЗАГОЛОВКИ --- */
+        h1 { margin: 0 0 5px 0; font-size: 28px; font-weight: 800; }
+        .gradient-text { background: var(--accent-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        p.subtitle { margin: 0 0 25px 0; color: var(--text-secondary); font-size: 14px; }
+
+        /* --- КАРТОЧКИ --- */
+        .card {
+            background: var(--card-bg);
+            border-radius: 18px;
+            padding: 16px;
+            margin-bottom: 12px;
+            border: 1px solid rgba(255,255,255,0.05);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* STARS СТИЛЬ */
+        .stars-display {
+            text-align: center;
+            padding: 30px 20px;
+            background: radial-gradient(circle at center, rgba(169, 128, 245, 0.15) 0%, rgba(0,0,0,0) 70%);
+        }
+        .stars-big-icon { font-size: 60px; margin-bottom: 10px; display: block; filter: drop-shadow(0 0 20px rgba(255, 215, 0, 0.5)); }
+        
+        .input-group {
+            position: relative;
+            margin-top: 20px;
+        }
+        .stars-input {
+            width: 100%;
+            background: #2c2c2e;
+            border: 1px solid rgba(255,255,255,0.1);
+            color: white;
+            padding: 16px;
+            border-radius: 14px;
+            font-size: 20px;
+            text-align: center;
+            font-weight: 700;
+            box-sizing: border-box;
+            outline: none;
+        }
+        .stars-input:focus { border-color: var(--active-color); }
+        .currency-label {
+            margin-top: 10px;
+            color: var(--text-secondary);
+            font-size: 13px;
+            display: flex; justify-content: space-between;
+        }
+
+        /* PREMIUM СТИЛЬ */
+        .premium-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .p-info h3 { margin: 0; font-size: 16px; }
+        .p-info p { margin: 4px 0 0; color: var(--active-color); font-weight: 600; font-size: 14px; }
+        
+        .add-btn {
+            background: #2c2c2e;
+            color: var(--active-color);
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .add-btn.added { background: var(--active-color); color: white; }
+
+        /* КОРЗИНА СТИЛЬ */
+        .cart-item {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 15px;
+        }
+        .cart-item:last-child { border: none; margin: 0; padding: 0; }
+        .del-btn { color: #ff3b30; font-size: 20px; cursor: pointer; padding: 5px; }
+
+        .empty-cart { text-align: center; margin-top: 50px; color: var(--text-secondary); }
+        .empty-icon { font-size: 60px; margin-bottom: 20px; display: block; opacity: 0.5; }
+
+        /* ОПЛАТА ЭКРАН */
+        .total-block { text-align: center; margin-top: 40px; }
+        .total-price { font-size: 40px; font-weight: 800; }
+        .pay-btn {
+            width: 100%;
+            background: var(--accent-gradient);
+            color: white;
+            border: none;
+            padding: 18px;
+            border-radius: 16px;
+            font-size: 18px;
+            font-weight: 700;
+            margin-top: 30px;
+            cursor: pointer;
+            box-shadow: 0 10px 30px rgba(169, 128, 245, 0.3);
+        }
+        .check-btn {
+            width: 100%; background: #2c2c2e; color: white; border: none; padding: 15px; border-radius: 16px; font-size: 16px; font-weight: 600; margin-top: 10px;
+        }
+
+        /* АНИМАЦИИ */
+        .pulse { animation: pulse 0.2s ease; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(0.95); } 100% { transform: scale(1); } }
+
+    </style>
+</head>
+<body>
+
+    <!-- СТРАНИЦА: ЗВЁЗДЫ -->
+    <div id="page-stars" class="page active">
+        <h1>Telegram <span class="gradient-text">Stars</span></h1>
+        <p class="subtitle">Валюта для ботов и каналов</p>
+
+        <div class="card stars-display">
+            <span class="stars-big-icon">⭐️</span>
+            <div class="input-group">
+                <input type="number" inputmode="numeric" id="starsAmount" class="stars-input" placeholder="0" oninput="updateCartUI()">
+            </div>
+            <div class="currency-label">
+                <span>1.6₽ / шт.</span>
+                <span id="stars-cost" style="color: var(--active-color); font-weight: 700;">0₽</span>
+            </div>
+        </div>
+        
+        <div style="background: rgba(169, 128, 245, 0.1); padding: 15px; border-radius: 12px; font-size: 13px; color: #d0d0d0; line-height: 1.4;">
+            ℹ️ Звёзды зачисляются на ваш аккаунт автоматически после оплаты. Введите нужное количество и перейдите в корзину.
+        </div>
+    </div>
+
+    <!-- СТРАНИЦА: ПРЕМИУМ -->
+    <div id="page-premium" class="page">
+        <h1>Telegram <span class="gradient-text">Premium</span></h1>
+        <p class="subtitle">Эксклюзивные возможности</p>
+
+        <div class="card premium-item">
+            <div class="p-info"><h3>3 Месяца</h3><p>1,250₽</p></div>
+            <button class="add-btn" id="btn-tg_premium_3" onclick="toggleItem('tg_premium_3', 1250)">Добавить</button>
+        </div>
+
+        <div class="card premium-item">
+            <div class="p-info"><h3>6 Месяцев</h3><p>1,500₽</p></div>
+            <button class="add-btn" id="btn-tg_premium_6" onclick="toggleItem('tg_premium_6', 1500)">Добавить</button>
+        </div>
+
+        <div class="card premium-item">
+            <div class="p-info"><h3>12 Месяцев</h3><p>2,750₽</p></div>
+            <button class="add-btn" id="btn-tg_premium_12" onclick="toggleItem('tg_premium_12', 2750)">Добавить</button>
+        </div>
+    </div>
+
+    <!-- СТРАНИЦА: КОРЗИНА -->
+    <div id="page-cart" class="page">
+        <h1>Ваша <span class="gradient-text">Корзина</span></h1>
+        <p class="subtitle">Проверьте заказ перед оплатой</p>
+
+        <div id="cart-content">
+            <!-- Сюда JS добавит товары -->
+        </div>
+
+        <div id="cart-footer" style="display: none;">
+            <div class="card" style="margin-top: 20px; display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-weight: 600;">Итого к оплате:</span>
+                <span id="cart-total" style="font-size: 20px; font-weight: 800; color: var(--active-color);">0₽</span>
+            </div>
+            
+            <button class="pay-btn" onclick="startPayment()">Оформить заказ</button>
+        </div>
+
+        <div id="empty-cart-msg" class="empty-cart">
+            <span class="empty-icon">🛒</span>
+            <h3>Корзина пуста</h3>
+            <p>Добавьте товары во вкладках Звёзды или Premium</p>
+        </div>
+    </div>
+
+    <!-- СТРАНИЦА: ОПЛАТА (ПОЯВЛЯЕТСЯ ПОСЛЕ ОФОРМЛЕНИЯ) -->
+    <div id="page-payment" class="page">
+        <h1 style="text-align: center;">Оплата</h1>
+        
+        <div class="total-block">
+            <p style="color: #8e8e93;">Сумма заказа</p>
+            <div class="total-price" id="pay-amount">0₽</div>
+            <div style="background: #2c2c2e; display: inline-block; padding: 5px 10px; border-radius: 8px; margin-top: 10px; font-family: monospace; color: #8e8e93;" id="pay-id">#000000</div>
+        </div>
+
+        <button class="pay-btn" onclick="openLink()">💳 Оплатить (ЮMoney)</button>
+        <button class="check-btn" onclick="checkPay()">🔄 Я оплатил</button>
+        <button class="check-btn" style="background: transparent; color: #8e8e93;" onclick="navTo('cart')">Вернуться</button>
+    </div>
+
+    <!-- СТРАНИЦА: УСПЕХ -->
+    <div id="page-success" class="page" style="text-align: center; padding-top: 60px;">
+        <span style="font-size: 80px; display: block; margin-bottom: 20px;">✅</span>
+        <h1>Успешно!</h1>
+        <p style="color: #8e8e93;">Оплата получена. Мы уже обрабатываем ваш заказ.</p>
+        <button class="check-btn" onclick="Telegram.WebApp.close()">Закрыть</button>
+    </div>
+
+    <!-- НИЖНЕЕ МЕНЮ -->
+    <nav class="bottom-nav">
+        <div class="nav-item active" onclick="navTo('stars')">
+            <span class="nav-icon">⭐️</span>
+            <span>Звёзды</span>
+        </div>
+        <div class="nav-item" onclick="navTo('premium')">
+            <span class="nav-icon">⚡️</span>
+            <span>Premium</span>
+        </div>
+        <div class="nav-item" style="position: relative;" onclick="navTo('cart')">
+            <span class="nav-icon">🛒</span>
+            <span>Корзина</span>
+            <div id="cart-badge" class="cart-badge">0</div>
+        </div>
+    </nav>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+
+        // СОСТОЯНИЕ
+        let state = {
+            stars: 0,
+            premium: {
+                tg_premium_3: 0,
+                tg_premium_6: 0,
+                tg_premium_12: 0
+            }
+        };
+        const NAMES = {
+            tg_premium_3: "Premium 3 мес.",
+            tg_premium_6: "Premium 6 мес.",
+            tg_premium_12: "Premium 12 мес."
+        };
+        
+        // Оплата
+        let currentOrder = { id: null, url: null };
+
+        // --- НАВИГАЦИЯ ---
+        function navTo(pageId) {
+            // Вибрация
+            tg.HapticFeedback.selectionChanged();
+
+            // Переключение вкладок
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById('page-' + pageId).classList.add('active');
+
+            // Подсветка кнопок меню
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+            // Находим индекс кнопки (костыль, но рабочий)
+            let idx = 0;
+            if (pageId === 'stars') idx = 0;
+            if (pageId === 'premium') idx = 1;
+            if (pageId === 'cart') idx = 2;
+            document.querySelectorAll('.nav-item')[idx].classList.add('active');
+
+            // Если открыли корзину - рендерим её
+            if (pageId === 'cart') renderCart();
+        }
+
+        // --- ЛОГИКА ---
+        function updateCartUI() {
+            // Звезды
+            const starsInput = document.getElementById('starsAmount');
+            let val = parseInt(starsInput.value) || 0;
+            if (val < 0) val = 0;
+            state.stars = val;
+            
+            document.getElementById('stars-cost').innerText = (val * 1.6).toLocaleString() + '₽';
+
+            // Бейджик на корзине
+            let count = 0;
+            if (state.stars > 0) count++;
+            if (state.premium.tg_premium_3 > 0) count++;
+            if (state.premium.tg_premium_6 > 0) count++;
+            if (state.premium.tg_premium_12 > 0) count++;
+
+            const badge = document.getElementById('cart-badge');
+            if (count > 0) {
+                badge.style.display = 'block';
+                badge.innerText = count;
+                badge.classList.add('pulse');
+                setTimeout(() => badge.classList.remove('pulse'), 200);
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+
+        // Добавление/Удаление Премиума (Toggle)
+        function toggleItem(id, price) {
+            tg.HapticFeedback.impactOccurred('medium');
+            const btn = document.getElementById('btn-' + id);
+            
+            if (state.premium[id] === 0) {
+                state.premium[id] = 1;
+                btn.classList.add('added');
+                btn.innerText = 'В корзине';
+            } else {
+                state.premium[id] = 0;
+                btn.classList.remove('added');
+                btn.innerText = 'Добавить';
+            }
+            updateCartUI();
+        }
+
+        // Рендер Корзины
+        function renderCart() {
+            const container = document.getElementById('cart-content');
+            container.innerHTML = '';
+            let total = 0;
+            let isEmpty = true;
+
+            // Звезды
+            if (state.stars > 0) {
+                isEmpty = false;
+                let price = state.stars * 1.6;
+                total += price;
+                container.innerHTML += `
+                    <div class="card cart-item">
+                        <div>
+                            <div style="font-weight: 700;">Stars (${state.stars})</div>
+                            <div style="font-size: 13px; color: #a980f5;">${price.toLocaleString()}₽</div>
+                        </div>
+                        <div class="del-btn" onclick="removeStars()">✕</div>
+                    </div>
+                `;
+            }
+
+            // Премиум
+            for (let [id, count] of Object.entries(state.premium)) {
+                if (count > 0) {
+                    isEmpty = false;
+                    let price = 0;
+                    if(id.includes('3')) price = 1250;
+                    if(id.includes('6')) price = 1500;
+                    if(id.includes('12')) price = 2750;
+                    total += price;
+                    
+                    container.innerHTML += `
+                        <div class="card cart-item">
+                            <div>
+                                <div style="font-weight: 700;">${NAMES[id]}</div>
+                                <div style="font-size: 13px; color: #a980f5;">${price.toLocaleString()}₽</div>
+                            </div>
+                            <div class="del-btn" onclick="removePremium('${id}')">✕</div>
+                        </div>
+                    `;
+                }
+            }
+
+            if (isEmpty) {
+                document.getElementById('empty-cart-msg').style.display = 'block';
+                document.getElementById('cart-footer').style.display = 'none';
+            } else {
+                document.getElementById('empty-cart-msg').style.display = 'none';
+                document.getElementById('cart-footer').style.display = 'block';
+                document.getElementById('cart-total').innerText = total.toLocaleString() + '₽';
+            }
+        }
+
+        function removeStars() {
+            document.getElementById('starsAmount').value = '';
+            updateCartUI();
+            renderCart();
+        }
+
+        function removePremium(id) {
+            toggleItem(id); // Выключит кнопку в табе Премиум и обновит стейт
+            renderCart();
+        }
+
+        // --- ОПЛАТА ---
+        async function startPayment() {
+            tg.MainButton.showProgress();
+            
+            // Формируем payload как в прошлом коде
+            const payload = {
+                cart: state.premium,
+                stars: state.stars,
+                user_id: tg.initDataUnsafe?.user?.id || 0
+            };
+
+            try {
+                const response = await fetch('/api/create_order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await response.json();
+
+                if (data.status === 'ok') {
+                    currentOrder.id = data.order_id;
+                    currentOrder.url = data.payment_url;
+                    
+                    document.getElementById('pay-amount').innerText = data.amount + '₽';
+                    document.getElementById('pay-id').innerText = '#' + data.order_id.slice(0, 8);
+                    
+                    // Переход на экран оплаты
+                    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+                    document.getElementById('page-payment').classList.add('active');
+                    // Скрываем нижнее меню на этапе оплаты
+                    document.querySelector('.bottom-nav').style.display = 'none';
+                }
+            } catch (e) {
+                alert('Ошибка: ' + e);
+            } finally {
+                tg.MainButton.hideProgress();
+            }
+        }
+
+        function openLink() {
+            if (currentOrder.url) tg.openLink(currentOrder.url);
+        }
+
+        async function checkPay() {
+            if (!currentOrder.id) return;
+            tg.HapticFeedback.notificationOccurred('warning');
+            
+            try {
+                const response = await fetch(`/api/check_payment?order_id=${currentOrder.id}`);
+                const data = await response.json();
+                
+                if (data.paid) {
+                    tg.HapticFeedback.notificationOccurred('success');
+                    document.getElementById('page-payment').classList.remove('active');
+                    document.getElementById('page-success').classList.add('active');
+                } else {
+                    tg.HapticFeedback.notificationOccurred('error');
+                    tg.showAlert('Оплата пока не найдена. Попробуйте через 15 секунд.');
+                }
+            } catch (e) { alert('Ошибка сети'); }
+        }
+    </script>
+</body>
+</html>
